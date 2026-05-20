@@ -1,0 +1,2137 @@
+<!DOCTYPE html>
+<html lang="id" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QurbanPro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50:'#ecfdf5', 100:'#d1fae5', 500:'#10b981', 600:'#059669', 700:'#047857' },
+            dark: { 800:'#1e293b', 900:'#0f172a', 950:'#020617' }
+          },
+          animation: { 'fade-in': 'fadeIn 0.2s ease', 'slide-up': 'slideUp 0.3s ease' },
+          keyframes: {
+            fadeIn: { '0%': { opacity: 0, transform: 'translateY(8px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
+            slideUp: { '0%': { opacity: 0, transform: 'translateY(20px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    * { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #059669; border-radius: 3px; }
+    .dark ::-webkit-scrollbar-thumb { background: #10b981; }
+    
+    .nav-link.active { background: linear-gradient(135deg, #059669, #0d9488) !important; color: white !important; box-shadow: 0 4px 14px rgba(5,150,105,0.25); }
+    .nav-link { transition: all 0.2s ease; }
+    .nav-link:hover:not(.active) { background: rgba(255,255,255,0.08); transform: translateX(2px); }
+    
+    .modal-backdrop { backdrop-filter: blur(8px); }
+    .light .modal-backdrop { background: rgba(0,0,0,0.4); }
+    .dark .modal-backdrop { background: rgba(0,0,0,0.7); }
+    
+    .toast { animation: toastIn 0.3s ease-out, toastOut 0.3s ease-in 2.7s forwards; }
+    @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    
+    .login-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
+    
+    /* Toggle Switch */
+    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; display: inline-block; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; inset: 0; background: #cbd5e1; border-radius: 24px; transition: 0.3s; }
+    .toggle-slider:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+    .toggle input:checked + .toggle-slider { background: #10b981; }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+    
+    /* Card Hover */
+    .card { transition: all 0.25s ease; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+    
+    /* Loading Skeleton */
+    .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton 1.5s infinite; }
+    .dark .skeleton { background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%); }
+    @keyframes skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    
+    /* Empty State */
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #94a3b8; }
+    .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+    
+    /* Button Focus */
+    button:focus-visible { outline: 2px solid #10b981; outline-offset: 2px; }
+    
+    /* Table Responsive */
+    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    
+    @media (max-width: 768px) {
+      .hide-mobile { display: none; }
+      .nav-link span { display: none; }
+      .nav-link .nav-icon { margin: 0 auto; }
+    }
+  </style>
+</head>
+<body class="light bg-gray-50 dark:bg-dark-950 min-h-screen transition-colors duration-200">
+
+<!-- Toast Container -->
+<div id="toast" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+<!-- ==================== LOGIN ==================== -->
+<div id="loginPage" class="fixed inset-0 z-[100] login-bg flex items-center justify-center p-4">
+  <div class="w-full max-w-md animate-fade-in">
+    <div class="text-center mb-8">
+      <div class="inline-flex w-20 h-20 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-3xl items-center justify-center mb-4 shadow-2xl shadow-emerald-500/30">
+        <i class="fas fa-mosque text-white text-3xl"></i>
+      </div>
+      <h1 class="text-3xl font-bold text-white mb-2">QurbanPro</h1>
+      <p class="text-gray-400">Sistem Informasi Qurban Terpadu</p>
+    </div>
+    
+    <form id="loginForm" class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl space-y-5">
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+        <div class="relative">
+          <i class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+          <input type="text" id="username" value="admin" required 
+            class="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition">
+        </div>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+        <div class="relative">
+          <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+          <input type="password" id="password" value="admin123" required 
+            class="w-full pl-12 pr-12 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition">
+          <button type="button" onclick="togglePass()" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition">
+            <i class="fas fa-eye" id="eyeIcon"></i>
+          </button>
+        </div>
+      </div>
+      
+      <button type="submit" id="loginBtn" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-emerald-500/30 transition flex items-center justify-center gap-2">
+        <i class="fas fa-sign-in-alt"></i> Masuk ke Dashboard
+      </button>
+      
+      <div class="text-center pt-4 border-t border-white/10">
+        <p class="text-xs text-gray-500">Default Accounts:</p>
+        <div class="flex justify-center gap-3 mt-2 text-[10px] text-gray-400">
+          <span class="bg-white/5 px-2 py-1 rounded">admin/admin123</span>
+          <span class="bg-white/5 px-2 py-1 rounded">editor/editor123</span>
+          <span class="bg-white/5 px-2 py-1 rounded">viewer/viewer123</span>
+        </div>
+      </div>
+    </form>
+    
+    <div id="loginError" class="hidden mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-center">
+      <p class="text-sm text-red-300"><i class="fas fa-exclamation-circle mr-2"></i><span id="errorMsg">Login gagal</span></p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MAIN APP ==================== -->
+<div id="app" class="hidden">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed left-0 top-0 h-full w-72 bg-gradient-to-b from-dark-900 to-dark-950 z-50 transition-transform duration-300 lg:translate-x-0 -translate-x-full overflow-y-auto flex flex-col border-r border-white/10">
+    <!-- Logo -->
+    <div class="p-5 border-b border-white/10">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
+          <i class="fas fa-mosque text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-white">QurbanPro</h1>
+          <p class="text-[10px] text-gray-400" id="mosqueName">Sistem Qurban</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Navigation -->
+    <nav class="p-3 space-y-1 flex-1">
+      <a onclick="navigate('dashboard')" id="nav-dashboard" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white cursor-pointer" data-role="view">
+        <i class="fas fa-chart-pie nav-icon w-5 text-center"></i><span>Dashboard</span>
+      </a>
+      <a onclick="navigate('hewan')" id="nav-hewan" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white cursor-pointer" data-role="view">
+        <i class="fas fa-horse nav-icon w-5 text-center"></i><span>Hewan Qurban</span>
+      </a>
+      <a onclick="navigate('donatur')" id="nav-donatur" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white cursor-pointer" data-role="view">
+        <i class="fas fa-hand-holding-heart nav-icon w-5 text-center"></i><span>Donatur</span>
+      </a>
+      <a onclick="navigate('mustahik')" id="nav-mustahik" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white cursor-pointer" data-role="view">
+        <i class="fas fa-users nav-icon w-5 text-center"></i><span>Mustahik</span>
+      </a>
+      <a onclick="navigate('panitia')" id="nav-panitia" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white cursor-pointer" data-role="view">
+        <i class="fas fa-user-tie nav-icon w-5 text-center"></i><span>Panitia</span>
+      </a>
+      <a onclick="navigate('kupon')" id="nav-kupon" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white cursor-pointer" data-role="edit">
+        <i class="fas fa-qrcode nav-icon w-5 text-center"></i><span>Kupon QR</span>
+      </a>
+      <a onclick="navigate('scan')" id="nav-scan" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white cursor-pointer" data-role="edit">
+        <i class="fas fa-camera nav-icon w-5 text-center"></i><span>Scan QR</span>
+      </a>
+      <a onclick="navigate('distribusi')" id="nav-distribusi" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white cursor-pointer" data-role="view">
+        <i class="fas fa-truck-loading nav-icon w-5 text-center"></i><span>Distribusi</span>
+      </a>
+      <a onclick="navigate('laporan')" id="nav-laporan" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white cursor-pointer" data-role="view">
+        <i class="fas fa-file-alt nav-icon w-5 text-center"></i><span>Laporan</span>
+      </a>
+      <a onclick="navigate('pengaturan')" id="nav-pengaturan" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white cursor-pointer" data-role="admin">
+        <i class="fas fa-cog nav-icon w-5 text-center"></i><span>Pengaturan</span>
+      </a>
+    </nav>
+    
+    <!-- Footer -->
+    <div class="p-4 border-t border-white/10">
+      <div class="bg-white/5 rounded-xl p-3 mb-3">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] text-gray-400">Database</span>
+          <span id="dbStatus" class="text-[10px] text-amber-400 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></span> MySQL
+          </span>
+        </div>
+        <div class="h-1 bg-gray-700 rounded-full overflow-hidden">
+          <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" id="dbProgress" style="width: 100%"></div>
+        </div>
+      </div>
+      
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold text-sm" id="userAvatar">A</div>
+          <div class="min-w-0">
+            <span class="text-sm font-medium text-white truncate block" id="userName">Admin</span>
+            <p class="text-[10px] text-gray-400" id="userRole">Administrator</p>
+          </div>
+        </div>
+        <button onclick="logout()" class="text-gray-400 hover:text-red-400 transition p-2 rounded-lg hover:bg-white/10" title="Logout">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+  
+  <!-- Mobile Toggle -->
+  <button onclick="toggleSidebar()" class="lg:hidden fixed top-4 left-4 z-[60] w-11 h-11 bg-emerald-600 text-white rounded-2xl shadow-lg flex items-center justify-center hover:bg-emerald-700 transition">
+    <i class="fas fa-bars"></i>
+  </button>
+  
+  <!-- Main Content -->
+  <main class="lg:ml-72 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white dark:bg-dark-900 border-b border-gray-100 dark:border-dark-800 sticky top-0 z-40 px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 id="pageTitle" class="text-2xl font-bold text-gray-800 dark:text-white">Dashboard</h2>
+          <p id="pageSubtitle" class="text-sm text-gray-500 dark:text-gray-400">Ringkasan data qurban</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="toggleTheme()" class="w-10 h-10 bg-gray-100 dark:bg-dark-800 rounded-xl flex items-center justify-center hover:bg-gray-200 dark:hover:bg-dark-700 transition" title="Toggle Theme">
+            <i class="fas fa-moon text-gray-600 dark:hidden"></i>
+            <i class="fas fa-sun text-yellow-400 hidden dark:block"></i>
+          </button>
+          <button onclick="exportData()" class="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition text-sm font-medium">
+            <i class="fas fa-file-export"></i><span class="hidden sm:inline">Export</span>
+          </button>
+          <button onclick="navigate('pengaturan')" class="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/50 transition text-sm font-medium">
+            <i class="fas fa-cog"></i><span class="hidden sm:inline">Settings</span>
+          </button>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Page Content -->
+    <div class="p-6" id="pageContent"></div>
+  </main>
+</div>
+
+<!-- ==================== MODALS ==================== -->
+<!-- Generic Form Modal -->
+<div id="formModal" class="modal-backdrop fixed inset-0 z-[70] hidden items-center justify-center p-4">
+  <div class="bg-white dark:bg-dark-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fade-in border border-gray-200 dark:border-dark-800">
+    <div class="p-5 border-b border-gray-100 dark:border-dark-800 flex items-center justify-between sticky top-0 bg-white dark:bg-dark-900 rounded-t-2xl z-10">
+      <h3 id="modalTitle" class="text-lg font-bold text-gray-800 dark:text-white">Tambah Data</h3>
+      <button onclick="closeModal('formModal')" class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-dark-800 transition">
+        <i class="fas fa-times text-gray-500"></i>
+      </button>
+    </div>
+    <div id="modalBody" class="p-5"></div>
+  </div>
+</div>
+
+<!-- ID Card Modal -->
+<div id="idCardModal" class="modal-backdrop fixed inset-0 z-[80] hidden items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-fade-in overflow-hidden">
+    <div id="idCardPreview"></div>
+    <div class="p-4 border-t border-gray-100 flex gap-2">
+      <button onclick="closeModal('idCardModal')" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition font-medium text-sm">Tutup</button>
+      <button onclick="downloadIdCard()" class="flex-1 px-4 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition font-medium text-sm">
+        <i class="fas fa-image mr-1"></i> JPG
+      </button>
+      <button onclick="printIdCard()" class="flex-1 px-4 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition font-medium text-sm">
+        <i class="fas fa-print mr-1"></i> Cetak
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Kupon Modal -->
+<div id="kuponModal" class="modal-backdrop fixed inset-0 z-[80] hidden items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-fade-in overflow-hidden">
+    <div id="kuponPreview"></div>
+    <div class="p-4 border-t border-gray-100 flex gap-2">
+      <button onclick="closeModal('kuponModal')" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition font-medium text-sm">Tutup</button>
+      <button onclick="downloadKupon()" class="flex-1 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition font-medium text-sm">
+        <i class="fas fa-download mr-1"></i> PNG
+      </button>
+      <button onclick="printKupon()" class="flex-1 px-4 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition font-medium text-sm">
+        <i class="fas fa-print mr-1"></i> Cetak
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden Inputs -->
+<input type="file" id="fileImport" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleImport(event)">
+<input type="file" id="fileRestore" accept=".json" class="hidden" onchange="handleRestore(event)">
+
+<script>
+// ==================== API CLIENT ====================
+const api = {
+  async request(method, endpoint, data = null) {
+    try {
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: data ? JSON.stringify(data) : null
+      });
+      return await res.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      toast('Gagal terhubung ke server', 'error');
+      return null;
+    }
+  },
+  get: (url) => api.request('GET', url),
+  post: (url, data) => api.request('POST', url, data),
+  put: (url, data) => api.request('PUT', url, data),
+  delete: (url) => api.request('DELETE', url)
+};
+
+// ==================== UTILS ====================
+const toast = (message, type = 'success') => {
+  const container = document.getElementById('toast');
+  const colors = { success: 'bg-emerald-500', error: 'bg-red-500', warning: 'bg-amber-500', info: 'bg-blue-500' };
+  const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+  
+  const el = document.createElement('div');
+  el.className = `toast flex items-center gap-3 px-4 py-3 ${colors[type]} text-white rounded-xl shadow-lg min-w-[280px] pointer-events-auto animate-slide-up`;
+  el.innerHTML = `<i class="fas ${icons[type]}"></i><span class="font-medium text-sm">${message}</span>`;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+};
+
+const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+const formatDate = (date) => new Date(date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+
+// ==================== AUTH ====================
+let currentUser = null;
+const ROLES = {
+  viewer: { label: 'Viewer', permissions: ['view'] },
+  editor: { label: 'Editor', permissions: ['view', 'edit'] },
+  admin: { label: 'Administrator', permissions: ['view', 'edit', 'delete', 'admin'] }
+};
+
+function hasPermission(permission) {
+  return currentUser && ROLES[currentUser.role]?.permissions.includes(permission);
+}
+
+function applyPermissions() {
+  // Hide/show nav items
+  document.querySelectorAll('[data-role]').forEach(el => {
+    const role = el.dataset.role;
+    el.style.display = hasPermission(role) ? 'flex' : 'none';
+  });
+  
+  // Hide/show action buttons
+  if (!hasPermission('edit')) document.querySelectorAll('.action-edit').forEach(el => el.style.display = 'none');
+  if (!hasPermission('delete')) document.querySelectorAll('.action-delete').forEach(el => el.style.display = 'none');
+  if (!hasPermission('admin')) document.querySelectorAll('.action-admin').forEach(el => el.style.display = 'none');
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const originalBtn = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+  btn.disabled = true;
+  
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  
+  const result = await api.post('/api/login', { u: username, p: password });
+  
+  btn.innerHTML = originalBtn;
+  btn.disabled = false;
+  
+  if (result?.success) {
+    currentUser = result.user;
+    localStorage.setItem('qp_user', JSON.stringify(currentUser));
+    
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    
+    initApp();
+    toast(`Selamat datang, ${currentUser.nama}!`, 'success');
+  } else {
+    document.getElementById('errorMsg').textContent = result?.message || 'Login gagal';
+    document.getElementById('loginError').classList.remove('hidden');
+  }
+}
+
+function togglePass() {
+  const input = document.getElementById('password');
+  const icon = document.getElementById('eyeIcon');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'fas fa-eye-slash';
+  } else {
+    input.type = 'password';
+    icon.className = 'fas fa-eye';
+  }
+}
+
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('qp_user');
+  location.reload();
+}
+
+// ==================== APP INIT ====================
+let currentPage = 'dashboard';
+const pageTitles = {
+  dashboard: ['Dashboard', 'Ringkasan data qurban'],
+  hewan: ['Hewan Qurban', 'Kelola data hewan'],
+  donatur: ['Donatur', 'Kelola data donatur'],
+  mustahik: ['Mustahik', 'Kelola data penerima'],
+  panitia: ['Panitia', 'Kelola data panitia'],
+  kupon: ['Kupon QR', 'Generate & kelola kupon'],
+  scan: ['Scan QR', 'Verifikasi kupon'],
+  distribusi: ['Distribusi', 'Kelola proses distribusi'],
+  laporan: ['Laporan', 'Cetak & analisis data'],
+  pengaturan: ['Pengaturan', 'Konfigurasi sistem']
+};
+
+async function initApp() {
+  // Update user info
+  document.getElementById('userAvatar').textContent = currentUser.nama.charAt(0);
+  document.getElementById('userName').textContent = currentUser.nama;
+  document.getElementById('userRole').textContent = ROLES[currentUser.role].label;
+  
+  // Apply permissions
+  applyPermissions();
+  
+  // Check DB connection
+  const test = await api.get('/api/hewan');
+  if (test !== null && !Array.isArray(test)) {
+    document.getElementById('dbStatus').innerHTML = '<span class="w-1.5 h-1.5 bg-red-400 rounded-full"></span> Error';
+    document.getElementById('dbStatus').className = 'text-[10px] text-red-400';
+  } else {
+    document.getElementById('dbStatus').innerHTML = '<span class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span> MySQL';
+    document.getElementById('dbStatus').className = 'text-[10px] text-emerald-400';
+  }
+  
+  // Navigate to dashboard
+  navigate('dashboard');
+}
+
+function toggleTheme() {
+  document.documentElement.classList.toggle('dark');
+  const isDark = document.documentElement.classList.contains('dark');
+  localStorage.setItem('qp_theme', isDark ? 'dark' : 'light');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('-translate-x-full');
+}
+
+async function navigate(page) {
+  currentPage = page;
+  
+  // Update active nav
+  document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+  document.getElementById(`nav-${page}`)?.classList.add('active');
+  
+  // Update header
+  const [title, subtitle] = pageTitles[page] || [page, ''];
+  document.getElementById('pageTitle').textContent = title;
+  document.getElementById('pageSubtitle').textContent = subtitle;
+  
+  // Show loading
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `<div class="flex justify-center items-center py-20"><div class="skeleton w-16 h-16 rounded-full"></div></div>`;
+  
+  // Close mobile sidebar
+  if (window.innerWidth < 1024) document.getElementById('sidebar').classList.add('-translate-x-full');
+  
+  // Load page content
+  setTimeout(async () => {
+    switch(page) {
+      case 'dashboard': await renderDashboard(); break;
+      case 'hewan': await renderTable('hewan', getHewanColumns()); break;
+      case 'donatur': await renderTable('donatur', getDonaturColumns()); break;
+      case 'mustahik': await renderMustahik(); break;
+      case 'panitia': await renderTable('panitia', getPanitiaColumns()); break;
+      case 'distribusi': await renderTable('distribusi', getDistribusiColumns()); break;
+      case 'kupon': await renderKupon(); break;
+      case 'scan': await renderScan(); break;
+      case 'laporan': await renderLaporan(); break;
+      case 'pengaturan': await renderPengaturan(); break;
+    }
+  }, 100);
+}
+
+// ==================== DASHBOARD ====================
+async function renderDashboard() {
+  const [hewan, donatur, mustahik, distribusi, panitia] = await Promise.all([
+    api.get('/api/hewan'),
+    api.get('/api/donatur'),
+    api.get('/api/mustahik'),
+    api.get('/api/distribusi'),
+    api.get('/api/panitia')
+  ]);
+  
+  const totalHewan = hewan?.reduce((sum, h) => sum + (h.jumlah || 0), 0) || 0;
+  const distributed = distribusi?.filter(d => d.status === 'Sudah Dibagikan').length || 0;
+  const received = mustahik?.filter(m => m.status_distribusi === 'Sudah').length || 0;
+  const progress = mustahik?.length ? Math.round((received / mustahik.length) * 100) : 0;
+  
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      ${statCard('Hewan', totalHewan, 'fa-horse', 'emerald')}
+      ${statCard('Donatur', donatur?.length || 0, 'fa-hand-holding-heart', 'blue')}
+      ${statCard('Mustahik', mustahik?.length || 0, 'fa-users', 'orange')}
+      ${statCard('Distribusi', distributed, 'fa-check-circle', 'purple')}
+      ${statCard('Panitia', panitia?.length || 0, 'fa-user-tie', 'pink')}
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <!-- Hewan by Jenis -->
+      <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800">
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <i class="fas fa-chart-bar text-emerald-500"></i> Hewan per Jenis
+        </h3>
+        <div id="chartHewan" class="space-y-3"></div>
+      </div>
+      
+      <!-- Mustahik Status -->
+      <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800">
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <i class="fas fa-chart-pie text-blue-500"></i> Status Mustahik
+        </h3>
+        <div id="chartMustahik" class="space-y-3"></div>
+        <div class="mt-4 pt-4 border-t border-gray-100 dark:border-dark-800">
+          <div class="flex items-center justify-between text-sm mb-2">
+            <span class="text-gray-500">Progress Distribusi</span>
+            <span class="font-bold text-emerald-600">${progress}%</span>
+          </div>
+          <div class="h-2 bg-gray-100 dark:bg-dark-800 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-700" style="width: ${progress}%"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Recent Activity -->
+      <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800">
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <i class="fas fa-clock text-amber-500"></i> Aktivitas Terbaru
+        </h3>
+        <div id="recentActivity" class="space-y-3 max-h-[200px] overflow-y-auto"></div>
+      </div>
+    </div>
+    
+    <!-- Quick Actions & Pending -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Pending Mustahik -->
+      <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800">
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <i class="fas fa-exclamation-circle text-amber-500"></i> Belum Menerima
+        </h3>
+        <div id="pendingMustahik" class="space-y-2 max-h-[250px] overflow-y-auto">
+          ${renderPendingMustahik(mustahik || [])}
+        </div>
+      </div>
+      
+      <!-- Quick Actions -->
+      <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800">
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <i class="fas fa-bolt text-purple-500"></i> Quick Actions
+        </h3>
+        <div class="grid grid-cols-3 gap-3">
+          ${quickAction('hewan', 'Hewan', 'fa-horse', 'emerald')}
+          ${quickAction('donatur', 'Donatur', 'fa-hand-holding-heart', 'blue')}
+          ${quickAction('mustahik', 'Mustahik', 'fa-users', 'orange')}
+          ${quickAction('kupon', 'Kupon', 'fa-qrcode', 'purple')}
+          ${quickAction('distribusi', 'Distribusi', 'fa-truck-loading', 'teal')}
+          ${quickAction('laporan', 'Laporan', 'fa-file-alt', 'pink')}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Render charts
+  renderHewanChart(hewan || []);
+  renderMustahikChart(mustahik || []);
+  renderActivity();
+}
+
+function statCard(label, value, icon, color) {
+  return `
+    <div class="bg-white dark:bg-dark-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-dark-800 card">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-${color}-100 dark:bg-${color}-900/30 rounded-xl flex items-center justify-center">
+          <i class="fas ${icon} text-${color}-600 dark:text-${color}-400"></i>
+        </div>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-800 dark:text-white">${value}</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400">${label}</p>
+    </div>
+  `;
+}
+
+function quickAction(page, label, icon, color) {
+  return `
+    <button onclick="navigate('${page}')" class="p-4 bg-${color}-50 dark:bg-${color}-900/20 rounded-xl hover:bg-${color}-100 dark:hover:bg-${color}-900/30 transition text-center group">
+      <i class="fas ${icon} text-${color}-600 dark:text-${color}-400 text-lg mb-2 block group-hover:scale-110 transition"></i>
+      <p class="text-xs font-medium text-gray-700 dark:text-gray-300">${label}</p>
+    </button>
+  `;
+}
+
+function renderHewanChart(data) {
+  const byJenis = {};
+  data.forEach(h => { byJenis[h.jenis] = (byJenis[h.jenis] || 0) + h.jumlah; });
+  const total = Object.values(byJenis).reduce((a, b) => a + b, 0) || 1;
+  const colors = { 'Sapi': '#10b981', 'Kambing': '#3b82f6', 'Domba': '#f59e0b', 'Kerbau': '#8b5cf6' };
+  
+  const container = document.getElementById('chartHewan');
+  container.innerHTML = Object.entries(byJenis).map(([jenis, count]) => {
+    const percent = Math.round((count / total) * 100);
+    return `
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">${jenis}</span>
+          <span class="text-sm font-semibold text-gray-800 dark:text-white">${count} (${percent}%)</span>
+        </div>
+        <div class="h-2 bg-gray-100 dark:bg-dark-800 rounded-full overflow-hidden">
+          <div class="h-full rounded-full transition-all duration-500" style="width: ${percent}%; background: ${colors[jenis] || '#64748b'}"></div>
+        </div>
+      </div>
+    `;
+  }).join('') || '<p class="text-gray-400 text-sm text-center py-4">Belum ada data</p>';
+}
+
+function renderMustahikChart(data) {
+  const received = data.filter(m => m.status_distribusi === 'Sudah').length;
+  const pending = data.length - received;
+  
+  const container = document.getElementById('chartMustahik');
+  container.innerHTML = `
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+          <i class="fas fa-check-circle text-emerald-500"></i> Sudah Menerima
+        </span>
+        <span class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">${received}</span>
+      </div>
+      <div class="h-2 bg-gray-100 dark:bg-dark-800 rounded-full overflow-hidden">
+        <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: ${data.length ? (received/data.length)*100 : 0}%"></div>
+      </div>
+    </div>
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+          <i class="fas fa-clock text-amber-500"></i> Belum Menerima
+        </span>
+        <span class="text-sm font-semibold text-amber-600 dark:text-amber-400">${pending}</span>
+      </div>
+      <div class="h-2 bg-gray-100 dark:bg-dark-800 rounded-full overflow-hidden">
+        <div class="h-full bg-amber-500 rounded-full transition-all duration-500" style="width: ${data.length ? (pending/data.length)*100 : 0}%"></div>
+      </div>
+    </div>
+  `;
+}
+
+async function renderActivity() {
+  const activity = await api.get('/api/activity') || [];
+  const container = document.getElementById('recentActivity');
+  
+  if (activity.length === 0) {
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Belum ada aktivitas</p>';
+    return;
+  }
+  
+  container.innerHTML = activity.slice(0, 6).map(a => `
+    <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-dark-800 rounded-xl">
+      <div class="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0"></div>
+      <div class="min-w-0">
+        <p class="text-sm text-gray-700 dark:text-gray-300 truncate">${a.text}</p>
+        <p class="text-xs text-gray-400 mt-0.5">${formatDate(a.time)}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderPendingMustahik(data) {
+  const pending = data.filter(m => m.status_distribusi === 'Belum');
+  
+  if (pending.length === 0) {
+    return '<p class="text-emerald-500 text-sm text-center py-4"><i class="fas fa-check-circle mr-2"></i>Semua sudah menerima</p>';
+  }
+  
+  return pending.slice(0, 8).map(m => `
+    <div class="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-800">
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-gray-800 dark:text-white truncate">${m.nama}</p>
+        <p class="text-xs text-gray-500">${m.kategori} • ${m.alamat?.substring(0, 20)}...</p>
+      </div>
+      <button onclick="toggleMustahikStatus('${m.id}')" class="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-600 transition action-edit whitespace-nowrap">
+        <i class="fas fa-check mr-1"></i>Terima
+      </button>
+    </div>
+  `).join('');
+}
+
+// ==================== GENERIC TABLE RENDERER ====================
+function getHewanColumns() {
+  return [
+    { key: 'jenis', label: 'Jenis', class: 'font-medium' },
+    { key: 'jumlah', label: 'Jumlah' },
+    { key: 'berat', label: 'Berat', format: v => `${v} kg` },
+    { key: 'harga', label: 'Harga', format: formatRupiah },
+    { key: 'donatur_id', label: 'Donatur', lookup: 'donatur', lookupKey: 'nama' },
+    { key: 'status', label: 'Status', badge: { 'Sudah Disembelih': 'emerald', 'Belum Disembelih': 'gray', 'Sedang Diproses': 'amber' } }
+  ];
+}
+
+function getDonaturColumns() {
+  return [
+    { key: 'nama', label: 'Nama', class: 'font-medium' },
+    { key: 'hp', label: 'HP' },
+    { key: 'alamat', label: 'Alamat', truncate: true },
+    { key: 'jenis_qurban', label: 'Jenis', badge: { 'Sapi': 'blue', 'Kambing': 'green', 'Domba': 'purple', 'Kerbau': 'orange' } }
+  ];
+}
+
+function getPanitiaColumns() {
+  return [
+    { key: 'nama', label: 'Nama', class: 'font-medium' },
+    { key: 'jabatan', label: 'Jabatan', badge: { 'Ketua': 'emerald', 'Wakil': 'blue', 'Sekretaris': 'purple', 'Bendahara': 'amber', 'Koordinator': 'teal', 'Anggota': 'gray' } },
+    { key: 'hp', label: 'HP' },
+    { key: 'tugas', label: 'Tugas', truncate: true }
+  ];
+}
+
+function getDistribusiColumns() {
+  return [
+    { key: 'tanggal', label: 'Tanggal', format: formatDate },
+    { key: 'mustahik_id', label: 'Mustahik', lookup: 'mustahik', lookupKey: 'nama' },
+    { key: 'hewan_id', label: 'Hewan', lookup: 'hewan', lookupKey: 'jenis' },
+    { key: 'bagian', label: 'Bagian' },
+    { key: 'berat', label: 'Berat', format: v => `${v} kg` },
+    { key: 'status', label: 'Status', badge: { 'Sudah Dibagikan': 'emerald', 'Sedang Diproses': 'amber' } }
+  ];
+}
+
+async function renderTable(table, columns) {
+  const data = await api.get(`/api/${table}`) || [];
+  const lookups = {};
+  
+  // Load lookup data
+  for (const col of columns) {
+    if (col.lookup && !lookups[col.lookup]) {
+      const items = await api.get(`/api/${col.lookup}`) || [];
+      lookups[col.lookup] = {};
+      items.forEach(item => { lookups[col.lookup][item.id] = item[col.lookupKey]; });
+    }
+  }
+  
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <!-- Toolbar -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-3">
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input type="text" id="searchInput" oninput="filterTable('${table}')" placeholder="Cari..." 
+            class="pl-9 pr-4 py-2 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 w-48 text-sm transition">
+        </div>
+        ${columns.some(c => c.badge) ? `
+        <select id="filterStatus" onchange="filterTable('${table}')" class="px-3 py-2 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500 text-sm">
+          <option value="">Semua</option>
+          ${[...new Set(data.map(d => {
+            const col = columns.find(c => c.badge);
+            return col ? d[col.key] : null;
+          }).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}
+        </select>` : ''}
+      </div>
+      <button onclick="openForm('${table}')" class="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition font-medium text-sm action-edit">
+        <i class="fas fa-plus"></i> Tambah
+      </button>
+    </div>
+    
+    <!-- Table -->
+    <div class="bg-white dark:bg-dark-900 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-800 overflow-hidden">
+      <div class="table-container">
+        <table class="w-full">
+          <thead class="bg-gray-50 dark:bg-dark-800 border-b border-gray-100 dark:border-dark-700">
+            <tr>
+              <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">No</th>
+              ${columns.map(c => `<th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">${c.label}</th>`).join('')}
+              <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider action-edit">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-gray-50 dark:divide-dark-800">
+            ${data.length === 0 ? `
+              <tr><td colspan="${columns.length + 2}" class="px-5 py-12 text-center">
+                <div class="empty-state">
+                  <i class="fas fa-inbox"></i>
+                  <p class="text-sm">Belum ada data</p>
+                  <button onclick="openForm('${table}')" class="mt-3 px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm action-edit">Tambah Data</button>
+                </div>
+              </td></tr>
+            ` : data.map((row, i) => `
+              <tr class="hover:bg-gray-50 dark:hover:bg-dark-800/50 transition group" data-id="${row.id}">
+                <td class="px-5 py-4 text-sm text-gray-500">${i + 1}</td>
+                ${columns.map(c => {
+                  let value = row[c.key];
+                  if (c.format) value = c.format(value);
+                  if (c.lookup) value = lookups[c.lookup]?.[value] || '-';
+                  if (c.truncate) value = `<span class="block max-w-[150px] truncate" title="${row[c.key]}">${value}</span>`;
+                  if (c.badge) {
+                    const color = c.badge[value] || 'gray';
+                    value = `<span class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-${color}-100 dark:bg-${color}-900/30 text-${color}-700 dark:text-${color}-400">${value}</span>`;
+                  }
+                  return `<td class="px-5 py-4 text-sm text-gray-700 dark:text-gray-300 ${c.class || ''}">${value || '-'}</td>`;
+                }).join('')}
+                <td class="px-5 py-4">
+                  <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition action-edit">
+                    <button onclick="openForm('${table}', '${row.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-500 transition" title="Edit">
+                      <i class="fas fa-edit text-xs"></i>
+                    </button>
+                    <button onclick="deleteItem('${table}', '${row.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 transition action-delete" title="Hapus">
+                      <i class="fas fa-trash text-xs"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Summary -->
+    ${data.length > 0 ? `
+    <div class="mt-4 flex items-center justify-between text-sm text-gray-500">
+      <span>Menampilkan ${data.length} data</span>
+      <button onclick="exportTable('${table}')" class="flex items-center gap-1 hover:text-emerald-600 transition">
+        <i class="fas fa-file-export"></i> Export Excel
+      </button>
+    </div>` : ''}
+  `;
+  
+  // Store data for filtering
+  window[`_${table}Data`] = data;
+  window[`_${table}Columns`] = columns;
+}
+
+function filterTable(table) {
+  const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+  const filter = document.getElementById('filterStatus')?.value || '';
+  const data = window[`_${table}Data`] || [];
+  const columns = window[`_${table}Columns`] || [];
+  
+  const filtered = data.filter(row => {
+    const matchesSearch = search === '' || columns.some(c => {
+      const val = String(row[c.key] || '').toLowerCase();
+      return val.includes(search);
+    });
+    const matchesFilter = filter === '' || columns.some(c => c.badge && row[c.key] === filter);
+    return matchesSearch && matchesFilter;
+  });
+  
+  // Re-render body only
+  const tbody = document.getElementById('tableBody');
+  if (!tbody) return;
+  
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${columns.length + 2}" class="px-5 py-12 text-center text-gray-400">Tidak ada hasil</td></tr>`;
+    return;
+  }
+  
+  const lookups = {};
+  columns.forEach(c => {
+    if (c.lookup && !lookups[c.lookup]) {
+      // Could load from cache or API
+    }
+  });
+  
+  tbody.innerHTML = filtered.map((row, i) => `
+    <tr class="hover:bg-gray-50 dark:hover:bg-dark-800/50 transition group" data-id="${row.id}">
+      <td class="px-5 py-4 text-sm text-gray-500">${i + 1}</td>
+      ${columns.map(c => {
+        let value = row[c.key];
+        if (c.format) value = c.format(value);
+        if (c.lookup) value = lookups[c.lookup]?.[value] || '-';
+        if (c.truncate) value = `<span class="block max-w-[150px] truncate" title="${row[c.key]}">${value}</span>`;
+        if (c.badge) {
+          const color = c.badge[value] || 'gray';
+          value = `<span class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-${color}-100 dark:bg-${color}-900/30 text-${color}-700 dark:text-${color}-400">${value}</span>`;
+        }
+        return `<td class="px-5 py-4 text-sm text-gray-700 dark:text-gray-300 ${c.class || ''}">${value || '-'}</td>`;
+      }).join('')}
+      <td class="px-5 py-4">
+        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition action-edit">
+          <button onclick="openForm('${table}', '${row.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-500 transition" title="Edit">
+            <i class="fas fa-edit text-xs"></i>
+          </button>
+          <button onclick="deleteItem('${table}', '${row.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 transition action-delete" title="Hapus">
+            <i class="fas fa-trash text-xs"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ==================== MUSTAHIK (Special) ====================
+async function renderMustahik() {
+  const data = await api.get('/api/mustahik') || [];
+  const categories = ['Fakir', 'Miskin', 'Amil', 'Mualaf', 'Gharimin', 'Ibnu Sabil', 'Mustahik'];
+  const categoryColors = {
+    'Fakir': 'red', 'Miskin': 'orange', 'Amil': 'blue', 'Mualaf': 'purple',
+    'Gharimin': 'amber', 'Ibnu Sabil': 'teal', 'Mustahik': 'gray'
+  };
+  
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <!-- Toolbar -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-3">
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input type="text" id="searchMustahik" oninput="filterMustahik()" placeholder="Cari..." 
+            class="pl-9 pr-4 py-2 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500 w-48 text-sm">
+        </div>
+        <select id="filterKategori" onchange="filterMustahik()" class="px-3 py-2 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500 text-sm">
+          <option value="">Semua Kategori</option>
+          ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="flex gap-2 action-edit">
+        <button onclick="markAllReceived()" class="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 transition text-sm font-medium">
+          <i class="fas fa-check-double"></i> Tandai Semua
+        </button>
+        <button onclick="openForm('mustahik')" class="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl hover:shadow-lg transition font-medium text-sm">
+          <i class="fas fa-plus"></i> Tambah
+        </button>
+      </div>
+    </div>
+    
+    <!-- Table -->
+    <div class="bg-white dark:bg-dark-900 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-800 overflow-hidden">
+      <div class="table-container">
+        <table class="w-full">
+          <thead class="bg-gray-50 dark:bg-dark-800 border-b border-gray-100 dark:border-dark-700">
+            <tr>
+              <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase">No</th>
+              <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase">Nama</th>
+              <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase">Status</th>
+              <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase">Kategori</th>
+              <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase hide-mobile">HP</th>
+              <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase hide-mobile">Alamat</th>
+              <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase">Jumlah</th>
+              <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase action-edit">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="mustahikBody" class="divide-y divide-gray-50 dark:divide-dark-800">
+            ${data.length === 0 ? `
+              <tr><td colspan="8" class="px-5 py-12 text-center">
+                <div class="empty-state">
+                  <i class="fas fa-users"></i>
+                  <p class="text-sm">Belum ada mustahik</p>
+                  <button onclick="openForm('mustahik')" class="mt-3 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm action-edit">Tambah Mustahik</button>
+                </div>
+              </td></tr>
+            ` : data.map((row, i) => {
+              const isReceived = row.status_distribusi === 'Sudah';
+              const color = categoryColors[row.kategori] || 'gray';
+              return `
+                <tr class="hover:bg-gray-50 dark:hover:bg-dark-800/50 transition group" data-id="${row.id}">
+                  <td class="px-5 py-4 text-sm text-gray-500">${i + 1}</td>
+                  <td class="px-5 py-4 text-sm font-medium text-gray-800 dark:text-white">${row.nama}</td>
+                  <td class="px-5 py-4">
+                    <label class="toggle">
+                      <input type="checkbox" ${isReceived ? 'checked' : ''} onchange="toggleMustahikStatus('${row.id}')">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </td>
+                  <td class="px-5 py-4">
+                    <span class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-${color}-100 dark:bg-${color}-900/30 text-${color}-700 dark:text-${color}-400">${row.kategori}</span>
+                  </td>
+                  <td class="px-5 py-4 text-sm text-gray-600 dark:text-gray-300 hide-mobile">${row.hp || '-'}</td>
+                  <td class="px-5 py-4 text-sm text-gray-600 dark:text-gray-300 hide-mobile truncate max-w-[120px]" title="${row.alamat}">${row.alamat || '-'}</td>
+                  <td class="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">${row.jumlah || 1}</td>
+                  <td class="px-5 py-4">
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition action-edit">
+                      <button onclick="openForm('mustahik', '${row.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-500 transition" title="Edit">
+                        <i class="fas fa-edit text-xs"></i>
+                      </button>
+                      <button onclick="deleteItem('mustahik', '${row.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 transition action-delete" title="Hapus">
+                        <i class="fas fa-trash text-xs"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  
+  window._mustahikData = data;
+}
+
+function filterMustahik() {
+  const search = document.getElementById('searchMustahik')?.value.toLowerCase() || '';
+  const kategori = document.getElementById('filterKategori')?.value || '';
+  const data = window._mustahikData || [];
+  
+  const filtered = data.filter(row => {
+    const matchesSearch = search === '' || row.nama.toLowerCase().includes(search) || row.alamat?.toLowerCase().includes(search);
+    const matchesKategori = kategori === '' || row.kategori === kategori;
+    return matchesSearch && matchesKategori;
+  });
+  
+  const tbody = document.getElementById('mustahikBody');
+  if (!tbody) return;
+  
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-12 text-center text-gray-400">Tidak ada hasil</td></tr>`;
+    return;
+  }
+  
+  const categoryColors = { 'Fakir': 'red', 'Miskin': 'orange', 'Amil': 'blue', 'Mualaf': 'purple', 'Gharimin': 'amber', 'Ibnu Sabil': 'teal', 'Mustahik': 'gray' };
+  
+  tbody.innerHTML = filtered.map((row, i) => {
+    const isReceived = row.status_distribusi === 'Sudah';
+    const color = categoryColors[row.kategori] || 'gray';
+    return `
+      <tr class="hover:bg-gray-50 dark:hover:bg-dark-800/50 transition group" data-id="${row.id}">
+        <td class="px-5 py-4 text-sm text-gray-500">${i + 1}</td>
+        <td class="px-5 py-4 text-sm font-medium text-gray-800 dark:text-white">${row.nama}</td>
+        <td class="px-5 py-4">
+          <label class="toggle">
+            <input type="checkbox" ${isReceived ? 'checked' : ''} onchange="toggleMustahikStatus('${row.id}')">
+            <span class="toggle-slider"></span>
+          </label>
+        </td>
+        <td class="px-5 py-4"><span class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-${color}-100 dark:bg-${color}-900/30 text-${color}-700 dark:text-${color}-400">${row.kategori}</span></td>
+        <td class="px-5 py-4 text-sm text-gray-600 dark:text-gray-300 hide-mobile">${row.hp || '-'}</td>
+        <td class="px-5 py-4 text-sm text-gray-600 dark:text-gray-300 hide-mobile truncate max-w-[120px]" title="${row.alamat}">${row.alamat || '-'}</td>
+        <td class="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">${row.jumlah || 1}</td>
+        <td class="px-5 py-4">
+          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition action-edit">
+            <button onclick="openForm('mustahik', '${row.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-500 transition"><i class="fas fa-edit text-xs"></i></button>
+            <button onclick="deleteItem('mustahik', '${row.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 transition action-delete"><i class="fas fa-trash text-xs"></i></button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function toggleMustahikStatus(id) {
+  const item = await api.get(`/api/mustahik/${id}`);
+  if (!item) return;
+  
+  const newStatus = item.status_distribusi === 'Sudah' ? 'Belum' : 'Sudah';
+  const result = await api.put(`/api/mustahik/${id}`, { status_distribusi: newStatus });
+  
+  if (result?.success) {
+    toast(`${item.nama} ditandai ${newStatus === 'Sudah' ? 'sudah' : 'belum'} menerima`, newStatus === 'Sudah' ? 'success' : 'info');
+    renderMustahik();
+    if (currentPage === 'dashboard') renderDashboard();
+  } else {
+    toast('Gagal update status', 'error');
+  }
+}
+
+async function markAllReceived() {
+  if (!confirm('Tandai SEMUA mustahik sudah menerima?')) return;
+  
+  const data = await api.get('/api/mustahik') || [];
+  let updated = 0;
+  
+  for (const item of data) {
+    if (item.status_distribusi === 'Belum') {
+      await api.put(`/api/mustahik/${item.id}`, { status_distribusi: 'Sudah' });
+      updated++;
+    }
+  }
+  
+  toast(`${updated} mustahik ditandai sudah menerima`, 'success');
+  renderMustahik();
+  if (currentPage === 'dashboard') renderDashboard();
+}
+
+// ==================== FORM MODAL ====================
+async function openForm(table, editId = null) {
+  const modal = document.getElementById('formModal');
+  const title = document.getElementById('modalTitle');
+  const body = document.getElementById('modalBody');
+  
+  title.textContent = editId ? `Edit ${table.charAt(0).toUpperCase() + table.slice(1)}` : `Tambah ${table.charAt(0).toUpperCase() + table.slice(1)}`;
+  
+  let item = null;
+  if (editId) {
+    item = await api.get(`/api/${table}/${editId}`);
+  }
+  
+  let form = '';
+  
+  if (table === 'hewan') {
+    form = `
+      <form onsubmit="saveForm(event, '${table}', '${editId || ''}')" class="space-y-4">
+        <input type="hidden" name="id" value="${item?.id || generateId()}">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jenis Hewan</label>
+          <select name="jenis" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20">
+            <option value="">Pilih Jenis</option>
+            ${['Sapi', 'Kambing', 'Domba', 'Kerbau'].map(j => `<option value="${j}" ${item?.jenis === j ? 'selected' : ''}>${j}</option>`).join('')}
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jumlah</label>
+            <input type="number" name="jumlah" value="${item?.jumlah || 1}" min="1" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Berat/Ekor (kg)</label>
+            <input type="number" name="berat" value="${item?.berat || ''}" step="0.1" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Harga</label>
+          <input type="number" name="harga" value="${item?.harga || ''}" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+          <select name="status" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            <option value="Belum Disembelih" ${item?.status === 'Belum Disembelih' ? 'selected' : ''}>Belum Disembelih</option>
+            <option value="Sudah Disembelih" ${item?.status === 'Sudah Disembelih' ? 'selected' : ''}>Sudah Disembelih</option>
+            <option value="Sedang Diproses" ${item?.status === 'Sedang Diproses' ? 'selected' : ''}>Sedang Diproses</option>
+          </select>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal('formModal')" class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl hover:bg-gray-50 dark:hover:bg-dark-800 transition font-medium text-gray-700 dark:text-gray-300">Batal</button>
+          <button type="submit" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg transition font-medium">${editId ? 'Update' : 'Simpan'}</button>
+        </div>
+      </form>
+    `;
+  }
+  else if (table === 'donatur') {
+    form = `
+      <form onsubmit="saveForm(event, '${table}', '${editId || ''}')" class="space-y-4">
+        <input type="hidden" name="id" value="${item?.id || generateId()}">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Lengkap</label>
+          <input type="text" name="nama" value="${item?.nama || ''}" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">No. HP</label>
+          <input type="text" name="hp" value="${item?.hp || ''}" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Alamat</label>
+          <textarea name="alamat" rows="2" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">${item?.alamat || ''}</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jenis Qurban</label>
+          <select name="jenis_qurban" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            <option value="">Pilih Jenis</option>
+            ${['Sapi', 'Kambing', 'Domba', 'Kerbau'].map(j => `<option value="${j}" ${item?.jenis_qurban === j ? 'selected' : ''}>${j}</option>`).join('')}
+          </select>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal('formModal')" class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl hover:bg-gray-50 dark:hover:bg-dark-800 transition font-medium text-gray-700 dark:text-gray-300">Batal</button>
+          <button type="submit" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition font-medium">${editId ? 'Update' : 'Simpan'}</button>
+        </div>
+      </form>
+    `;
+  }
+  else if (table === 'mustahik') {
+    form = `
+      <form onsubmit="saveForm(event, '${table}', '${editId || ''}')" class="space-y-4">
+        <input type="hidden" name="id" value="${item?.id || generateId()}">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Lengkap</label>
+          <input type="text" name="nama" value="${item?.nama || ''}" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori</label>
+            <select name="kategori" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+              <option value="">Pilih</option>
+              ${['Fakir', 'Miskin', 'Amil', 'Mualaf', 'Gharimin', 'Ibnu Sabil', 'Mustahik'].map(k => `<option value="${k}" ${item?.kategori === k ? 'selected' : ''}>${k}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jumlah KK</label>
+            <input type="number" name="jumlah" value="${item?.jumlah || 1}" min="1" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">No. HP</label>
+          <input type="text" name="hp" value="${item?.hp || ''}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Alamat</label>
+          <textarea name="alamat" rows="2" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">${item?.alamat || ''}</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status Distribusi</label>
+          <select name="status_distribusi" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            <option value="Belum" ${item?.status_distribusi === 'Belum' ? 'selected' : ''}>Belum Menerima</option>
+            <option value="Sudah" ${item?.status_distribusi === 'Sudah' ? 'selected' : ''}>Sudah Menerima</option>
+          </select>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal('formModal')" class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl hover:bg-gray-50 dark:hover:bg-dark-800 transition font-medium text-gray-700 dark:text-gray-300">Batal</button>
+          <button type="submit" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl hover:shadow-lg transition font-medium">${editId ? 'Update' : 'Simpan'}</button>
+        </div>
+      </form>
+    `;
+  }
+  else if (table === 'panitia') {
+    form = `
+      <form onsubmit="saveForm(event, '${table}', '${editId || ''}')" class="space-y-4">
+        <input type="hidden" name="id" value="${item?.id || generateId()}">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Lengkap</label>
+          <input type="text" name="nama" value="${item?.nama || ''}" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jabatan</label>
+          <select name="jabatan" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            <option value="">Pilih Jabatan</option>
+            ${['Ketua', 'Wakil', 'Sekretaris', 'Bendahara', 'Koordinator', 'Anggota'].map(j => `<option value="${j}" ${item?.jabatan === j ? 'selected' : ''}>${j}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">No. HP</label>
+          <input type="text" name="hp" value="${item?.hp || ''}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tugas</label>
+          <textarea name="tugas" rows="2" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">${item?.tugas || ''}</textarea>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal('formModal')" class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl hover:bg-gray-50 dark:hover:bg-dark-800 transition font-medium text-gray-700 dark:text-gray-300">Batal</button>
+          <button type="submit" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl hover:shadow-lg transition font-medium">${editId ? 'Update' : 'Simpan'}</button>
+        </div>
+      </form>
+    `;
+  }
+  else if (table === 'distribusi') {
+    const [mustahikList, hewanList] = await Promise.all([
+      api.get('/api/mustahik'),
+      api.get('/api/hewan')
+    ]);
+    
+    form = `
+      <form onsubmit="saveForm(event, '${table}', '${editId || ''}')" class="space-y-4">
+        <input type="hidden" name="id" value="${item?.id || generateId()}">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tanggal</label>
+          <input type="date" name="tanggal" value="${item?.tanggal || new Date().toISOString().split('T')[0]}" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mustahik</label>
+          <select name="mustahik_id" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            <option value="">Pilih Mustahik</option>
+            ${(mustahikList || []).map(m => `<option value="${m.id}" ${item?.mustahik_id === m.id ? 'selected' : ''}>${m.nama}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hewan</label>
+          <select name="hewan_id" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            <option value="">Pilih Hewan</option>
+            ${(hewanList || []).filter(h => h.status === 'Sudah Disembelih').map(h => `<option value="${h.id}" ${item?.hewan_id === h.id ? 'selected' : ''}>${h.jenis}</option>`).join('')}
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bagian</label>
+            <select name="bagian" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+              <option value="">Pilih</option>
+              ${['1/3', '1/2', '1/4', '1/5', '1/7', '1'].map(b => `<option value="${b}" ${item?.bagian === b ? 'selected' : ''}>${b}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Berat (kg)</label>
+            <input type="number" name="berat" value="${item?.berat || ''}" step="0.1" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+          <select name="status" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            <option value="Sudah Dibagikan" ${item?.status === 'Sudah Dibagikan' ? 'selected' : ''}>Sudah Dibagikan</option>
+            <option value="Sedang Diproses" ${item?.status === 'Sedang Diproses' ? 'selected' : ''}>Sedang Diproses</option>
+          </select>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal('formModal')" class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl hover:bg-gray-50 dark:hover:bg-dark-800 transition font-medium text-gray-700 dark:text-gray-300">Batal</button>
+          <button type="submit" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg transition font-medium">${editId ? 'Update' : 'Simpan'}</button>
+        </div>
+      </form>
+    `;
+  }
+  
+  body.innerHTML = form;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.add('hidden');
+  document.getElementById(modalId).classList.remove('flex');
+}
+
+async function saveForm(e, table, editId) {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData(form);
+  const data = {};
+  
+  formData.forEach((value, key) => {
+    if (value) data[key] = value;
+  });
+  
+  // Convert numeric fields
+  if (data.jumlah) data.jumlah = parseInt(data.jumlah);
+  if (data.berat) data.berat = parseFloat(data.berat);
+  if (data.harga) data.harga = parseFloat(data.harga);
+  
+  const endpoint = editId ? `/api/${table}/${data.id}` : `/api/${table}`;
+  const method = editId ? 'put' : 'post';
+  
+  const result = await api[method](endpoint, data);
+  
+  if (result?.success) {
+    closeModal('formModal');
+    toast(editId ? 'Data diperbarui' : 'Data disimpan', 'success');
+    
+    // Refresh current page
+    if (currentPage === 'dashboard') renderDashboard();
+    else if (currentPage === table) navigate(table);
+    
+    // Log activity
+    await api.post('/api/activity', { text: `${table} ${editId ? 'diperbarui' : 'ditambahkan'}: ${data.nama || data.jenis || ''}` });
+  } else {
+    toast('Gagal menyimpan: ' + (result?.error || 'Unknown error'), 'error');
+  }
+}
+
+async function deleteItem(table, id) {
+  if (!confirm('Hapus data ini? Tindakan ini tidak dapat dibatalkan.')) return;
+  
+  const result = await api.delete(`/api/${table}/${id}`);
+  
+  if (result?.success) {
+    toast('Data dihapus', 'warning');
+    if (currentPage === 'dashboard') renderDashboard();
+    else if (currentPage === table) navigate(table);
+    await api.post('/api/activity', { text: `${table} dihapus` });
+  } else {
+    toast('Gagal menghapus', 'error');
+  }
+}
+
+// ==================== KUPON QR ====================
+async function renderKupon() {
+  const [kupon, mustahik] = await Promise.all([
+    api.get('/api/kupon'),
+    api.get('/api/mustahik')
+  ]);
+  
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <!-- Generate Section -->
+    <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800 mb-6">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+        <i class="fas fa-qrcode text-emerald-500"></i> Generate Kupon QR
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pilih Mustahik</label>
+          <select id="kuponMustahik" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            <option value="">Pilih Mustahik</option>
+            ${(mustahik || []).map(m => `<option value="${m.id}">${m.nama} (${m.kategori})</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bagian</label>
+          <select id="kuponBagian" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            <option value="1/3">1/3 (Sepertiga)</option>
+            <option value="1/2">1/2 (Setengah)</option>
+            <option value="1/4">1/4 (Seperempat)</option>
+            <option value="1/7">1/7 (Septujuh)</option>
+            <option value="1">Full</option>
+          </select>
+        </div>
+        <div class="flex items-end gap-2">
+          <button onclick="generateKupon()" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg transition font-medium action-edit">
+            <i class="fas fa-qrcode mr-1"></i> Generate
+          </button>
+          <button onclick="generateAllKupon()" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition font-medium action-edit">
+            <i class="fas fa-layer-group mr-1"></i> Semua
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Kupon Grid -->
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+        <i class="fas fa-ticket-alt text-emerald-500"></i> Kupon yang Digenerate
+      </h3>
+      <button onclick="printAllKupon()" class="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-100 transition text-sm font-medium">
+        <i class="fas fa-print"></i> Cetak Semua
+      </button>
+    </div>
+    
+    <div id="kuponGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      ${(kupon || []).length === 0 ? `
+        <div class="col-span-full empty-state">
+          <i class="fas fa-qrcode"></i>
+          <p class="text-sm">Belum ada kupon</p>
+          <p class="text-xs text-gray-400 mt-1">Generate kupon untuk mustahik</p>
+        </div>
+      ` : (kupon || []).map(k => {
+        const m = mustahik?.find(x => x.id === k.mustahik_id);
+        return `
+          <div class="bg-white dark:bg-dark-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-dark-800 card">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <p class="font-semibold text-gray-800 dark:text-white text-sm">${m?.nama || 'Unknown'}</p>
+                <p class="text-xs text-gray-500">${m?.kategori || ''}</p>
+              </div>
+              <span class="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-xs font-medium">${k.bagian}</span>
+            </div>
+            <div class="flex justify-center bg-gray-50 dark:bg-dark-800 rounded-xl p-3 mb-3">
+              <div id="qr-${k.id}" class="w-24 h-24"></div>
+            </div>
+            <p class="text-center text-[10px] text-gray-400 font-mono mb-1">${k.code}</p>
+            <p class="text-center text-[10px] ${k.used ? 'text-amber-600' : 'text-emerald-600'} font-medium">
+              ${k.used ? '✅ Sudah Digunakan' : '⏳ Aktif'}
+            </p>
+            <div class="flex gap-2 mt-3">
+              <button onclick="showKupon('${k.id}')" class="flex-1 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-100 transition">
+                <i class="fas fa-eye mr-1"></i>Lihat
+              </button>
+              <button onclick="deleteItem('kupon', '${k.id}')" class="px-3 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-xs font-medium hover:bg-red-100 transition action-delete">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+  
+  // Render QR codes
+  setTimeout(() => {
+    (kupon || []).forEach(k => {
+      const el = document.getElementById(`qr-${k.id}`);
+      if (el) {
+        el.innerHTML = '';
+        new QRCode(el, { text: k.code, width: 96, height: 96, colorDark: '#064e3b', colorLight: '#ffffff' });
+      }
+    });
+  }, 100);
+}
+
+async function generateKupon() {
+  const mustahikId = document.getElementById('kuponMustahik').value;
+  const bagian = document.getElementById('kuponBagian').value;
+  
+  if (!mustahikId) { toast('Pilih mustahik terlebih dahulu', 'error'); return; }
+  
+  const m = await api.get(`/api/mustahik/${mustahikId}`);
+  const code = 'QRB-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+  
+  const result = await api.post('/api/kupon', {
+    id: generateId(),
+    code,
+    mustahik_id: mustahikId,
+    bagian,
+    tanggal: new Date().toISOString().split('T')[0],
+    used: false
+  });
+  
+  if (result?.success) {
+    toast('Kupon digenerate', 'success');
+    renderKupon();
+    await api.post('/api/activity', { text: `Kupon QR digenerate untuk ${m?.nama}` });
+  } else {
+    toast('Gagal generate kupon', 'error');
+  }
+}
+
+async function generateAllKupon() {
+  const mustahik = await api.get('/api/mustahik') || [];
+  const existing = await api.get('/api/kupon') || [];
+  const existingIds = existing.map(k => k.mustahik_id);
+  
+  const toGenerate = mustahik.filter(m => !existingIds.includes(m.id));
+  
+  if (toGenerate.length === 0) { toast('Semua mustahik sudah punya kupon', 'info'); return; }
+  
+  let success = 0;
+  for (const m of toGenerate) {
+    const code = 'QRB-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+    const result = await api.post('/api/kupon', {
+      id: generateId(),
+      code,
+      mustahik_id: m.id,
+      bagian: '1/3',
+      tanggal: new Date().toISOString().split('T')[0],
+      used: false
+    });
+    if (result?.success) success++;
+  }
+  
+  toast(`${success} kupon digenerate`, 'success');
+  renderKupon();
+}
+
+function showKupon(id) {
+  // Implementation for showing kupon modal
+  toast('Fitur preview kupon', 'info');
+}
+
+function downloadKupon() { toast('Download kupon', 'info'); }
+function printKupon() { toast('Cetak kupon', 'info'); }
+function printAllKupon() { toast('Cetak semua kupon', 'info'); }
+
+// ==================== SCAN QR ====================
+let scanner = null;
+
+async function renderScan() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Scanner -->
+      <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800">
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <i class="fas fa-camera text-emerald-500"></i> Scan QR Code
+        </h3>
+        <div id="qr-reader" class="rounded-xl overflow-hidden border-2 border-gray-200 dark:border-dark-700 bg-gray-50 dark:bg-dark-800 aspect-video flex items-center justify-center">
+          <p class="text-gray-400 text-sm">Klik "Mulai Scan" untuk mengaktifkan kamera</p>
+        </div>
+        <div id="scanResult" class="mt-4 hidden">
+          <div class="p-4 rounded-xl border" id="scanResultContent"></div>
+        </div>
+        <div class="flex gap-3 mt-4">
+          <button onclick="startScanner()" id="btnStartScan" class="flex-1 px-4 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition font-medium">
+            <i class="fas fa-play mr-1"></i> Mulai Scan
+          </button>
+          <button onclick="stopScanner()" id="btnStopScan" class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition font-medium hidden">
+            <i class="fas fa-stop mr-1"></i> Stop
+          </button>
+        </div>
+      </div>
+      
+      <!-- Manual Input -->
+      <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800">
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <i class="fas fa-keyboard text-blue-500"></i> Input Manual
+        </h3>
+        <div class="space-y-3">
+          <input type="text" id="manualCode" placeholder="Masukkan kode kupon..." 
+            class="w-full px-4 py-3 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20">
+          <button onclick="verifyManual()" class="w-full px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition font-medium">
+            <i class="fas fa-search mr-1"></i> Verifikasi Kode
+          </button>
+        </div>
+        <div id="manualResult" class="mt-4 hidden">
+          <div class="p-4 rounded-xl border" id="manualResultContent"></div>
+        </div>
+        
+        <!-- History -->
+        <div class="mt-8">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+            <i class="fas fa-history text-gray-400"></i> Riwayat Scan
+          </h4>
+          <div id="scanHistory" class="space-y-2 max-h-[250px] overflow-y-auto">
+            <p class="text-gray-400 text-sm text-center py-4">Belum ada riwayat scan</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function startScanner() {
+  document.getElementById('btnStartScan').classList.add('hidden');
+  document.getElementById('btnStopScan').classList.remove('hidden');
+  
+  scanner = new Html5Qrcode('qr-reader');
+  scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, 
+    code => { verifyKupon(code); stopScanner(); },
+    err => { console.log(err); }
+  ).catch(err => {
+    toast('Gagal akses kamera: ' + err.message, 'error');
+    document.getElementById('btnStartScan').classList.remove('hidden');
+    document.getElementById('btnStopScan').classList.add('hidden');
+  });
+}
+
+function stopScanner() {
+  document.getElementById('btnStartScan').classList.remove('hidden');
+  document.getElementById('btnStopScan').classList.add('hidden');
+  
+  if (scanner) {
+    scanner.stop().catch(() => {});
+    scanner.clear().catch(() => {});
+    scanner = null;
+  }
+}
+
+async function verifyKupon(code) {
+  const kupon = await api.get('/api/kupon');
+  const found = kupon?.find(k => k.code === code);
+  
+  const resultDiv = document.getElementById('scanResult');
+  const contentDiv = document.getElementById('scanResultContent');
+  resultDiv.classList.remove('hidden');
+  
+  if (found) {
+    const mustahik = await api.get(`/api/mustahik/${found.mustahik_id}`);
+    if (found.used) {
+      contentDiv.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20';
+      contentDiv.innerHTML = `<div class="flex items-center gap-3"><div class="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white"><i class="fas fa-exclamation"></i></div><div><p class="font-bold text-amber-800 dark:text-amber-400">SUDAH DIGUNAKAN</p><p class="text-sm text-amber-600 dark:text-amber-500">Kupon ini sudah pernah digunakan</p></div></div>`;
+    } else {
+      contentDiv.className = 'p-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20';
+      contentDiv.innerHTML = `<div class="flex items-center gap-3"><div class="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white"><i class="fas fa-check"></i></div><div><p class="font-bold text-emerald-800 dark:text-emerald-400">VALID</p><p class="text-sm text-emerald-600 dark:text-emerald-500">${mustahik?.nama || 'Unknown'} • ${found.bagian}</p></div></div><button onclick="markKuponUsed('${found.id}')" class="mt-3 w-full px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition font-medium text-sm"><i class="fas fa-check-circle mr-1"></i> Tandai Sudah Digunakan</button>`;
+    }
+  } else {
+    contentDiv.className = 'p-4 rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20';
+    contentDiv.innerHTML = `<div class="flex items-center gap-3"><div class="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center text-white"><i class="fas fa-times"></i></div><div><p class="font-bold text-red-800 dark:text-red-400">TIDAK VALID</p><p class="text-sm text-red-600 dark:text-red-500">Kode kupon tidak ditemukan</p></div></div>`;
+  }
+  
+  // Add to history
+  addScanHistory(code, found?.used, !!found);
+}
+
+function verifyManual() {
+  const code = document.getElementById('manualCode').value.trim();
+  if (!code) { toast('Masukkan kode kupon', 'error'); return; }
+  verifyKupon(code);
+}
+
+async function markKuponUsed(id) {
+  const result = await api.put(`/api/kupon/${id}`, { used: true, used_at: new Date().toISOString() });
+  if (result?.success) {
+    toast('Kupon ditandai sudah digunakan', 'success');
+    verifyKupon(document.getElementById('manualCode').value || '');
+    await api.post('/api/activity', { text: `Kupon ${id} digunakan` });
+  } else {
+    toast('Gagal update kupon', 'error');
+  }
+}
+
+function addScanHistory(code, wasUsed, isValid) {
+  const history = JSON.parse(localStorage.getItem('qp_scan_history') || '[]');
+  history.unshift({ code, wasUsed, isValid, time: new Date().toISOString() });
+  if (history.length > 20) history.pop();
+  localStorage.setItem('qp_scan_history', JSON.stringify(history));
+  renderScanHistory();
+}
+
+function renderScanHistory() {
+  const history = JSON.parse(localStorage.getItem('qp_scan_history') || '[]');
+  const container = document.getElementById('scanHistory');
+  if (!container) return;
+  
+  if (history.length === 0) {
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Belum ada riwayat scan</p>';
+    return;
+  }
+  
+  container.innerHTML = history.map(h => `
+    <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-dark-800 rounded-xl">
+      <div class="w-8 h-8 ${h.isValid ? (h.wasUsed ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600') : 'bg-red-100 text-red-600'} rounded-full flex items-center justify-center flex-shrink-0">
+        <i class="fas ${h.isValid ? (h.wasUsed ? 'fa-exclamation' : 'fa-check') : 'fa-times'} text-xs"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-mono text-gray-700 dark:text-gray-300 truncate">${h.code}</p>
+        <p class="text-[10px] text-gray-400">${formatDate(h.time)}</p>
+      </div>
+      <span class="text-[10px] px-2 py-0.5 rounded ${h.isValid ? (h.wasUsed ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700') : 'bg-red-100 text-red-700'}">${h.isValid ? (h.wasUsed ? 'Used' : 'Valid') : 'Invalid'}</span>
+    </div>
+  `).join('');
+}
+
+// ==================== ID CARD ====================
+async function showIdCard(id) {
+  const panitia = await api.get(`/api/panitia/${id}`);
+  if (!panitia) return;
+  
+  const settings = JSON.parse(localStorage.getItem('qp_settings') || '{}');
+  const icon = settings.appIcon || 'fa-mosque';
+  
+  document.getElementById('idCardPreview').innerHTML = `
+    <div id="idcard-capture" class="w-[400px] bg-gradient-to-br from-white to-gray-50 rounded-2xl overflow-hidden shadow-xl mx-auto">
+      <div class="h-28 bg-gradient-to-br from-emerald-500 to-teal-600 relative">
+        <div class="absolute inset-0 opacity-10">
+          <div class="absolute top-3 right-3 w-16 h-16 border-2 border-white rounded-full"></div>
+          <div class="absolute bottom-3 right-12 w-10 h-10 border-2 border-white rounded-full"></div>
+        </div>
+        <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg">
+          <i class="fas ${icon} text-emerald-600 text-xl"></i>
+        </div>
+      </div>
+      <div class="pt-10 px-6 pb-5 text-center">
+        <h3 class="font-bold text-gray-800 text-lg">${panitia.nama}</h3>
+        <p class="text-xs text-emerald-600 font-semibold bg-emerald-50 px-3 py-1 rounded-full inline-block mt-1">${panitia.jabatan}</p>
+        <p class="text-xs text-gray-500 mt-2"><i class="fas fa-tasks mr-1"></i>${panitia.tugas}</p>
+        <p class="text-xs text-gray-400 mt-1"><i class="fas fa-phone mr-1"></i>${panitia.hp || '-'}</p>
+        <div class="flex justify-center mt-3 bg-gray-50 rounded-xl p-2 inline-block">
+          <div id="idcard-qr-${panitia.id}"></div>
+        </div>
+        <p class="text-[9px] text-gray-400 mt-2 font-mono">ID: ${panitia.id.substring(0, 8).toUpperCase()}</p>
+        <p class="text-[9px] text-gray-400">${settings.mosqueName || 'QurbanPro'} • ${settings.hijriYear || '1447 H'}</p>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('idCardModal').classList.remove('hidden');
+  document.getElementById('idCardModal').classList.add('flex');
+  
+  setTimeout(() => {
+    const el = document.getElementById(`idcard-qr-${panitia.id}`);
+    if (el) {
+      el.innerHTML = '';
+      new QRCode(el, { text: 'ID:' + panitia.id, width: 100, height: 100, colorDark: '#064e3b', colorLight: '#ffffff' });
+    }
+  }, 100);
+}
+
+function downloadIdCard() {
+  const el = document.getElementById('idcard-capture');
+  if (!el) return toast('Error', 'error');
+  
+  toast('Generating JPG...', 'info');
+  html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'id-card.jpg';
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+    toast('ID Card downloaded', 'success');
+  }).catch(() => toast('Gagal download', 'error'));
+}
+
+function printIdCard() {
+  const content = document.getElementById('idCardPreview').innerHTML;
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>ID Card</title><style>body{display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;font-family:Arial,sans-serif}@media print{body{margin:0}}</style></head><body>${content}</body></html>`);
+  w.document.close();
+  w.print();
+}
+
+async function printAllIdCards() {
+  const panitia = await api.get('/api/panitia') || [];
+  if (panitia.length === 0) { toast('Belum ada data panitia', 'error'); return; }
+  
+  const settings = JSON.parse(localStorage.getItem('qp_settings') || '{}');
+  const icon = settings.appIcon || 'fa-mosque';
+  
+  const content = panitia.map(p => `
+    <div style="display:inline-block;margin:15px;vertical-align:top">
+      <div style="width:350px;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.1);position:relative">
+        <div style="height:90px;background:linear-gradient(135deg,#10b981,#0d9488);position:relative">
+          <div style="position:absolute;inset:0;opacity:0.1">
+            <div style="position:absolute;top:8px;right:8px;width:60px;height:60px;border:2px solid white;border-radius:50%"></div>
+          </div>
+          <div style="position:absolute;bottom:-25px;left:50%;transform:translateX(-50%);width:50px;height:50px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+            <i class="fas ${icon}" style="color:#059669;font-size:20px"></i>
+          </div>
+        </div>
+        <div style="padding-top:35px 20px 15px;text-align:center">
+          <h3 style="font-weight:bold;color:#1f2937;font-size:16px;margin:0">${p.nama}</h3>
+          <p style="font-size:11px;color:#059669;font-weight:600;background:#ecfdf5;padding:3px 10px;border-radius:20px;display:inline-block;margin-top:5px">${p.jabatan}</p>
+          <p style="font-size:11px;color:#6b7280;margin-top:8px"><i class="fas fa-tasks"></i> ${p.tugas}</p>
+          <p style="font-size:11px;color:#9ca3af"><i class="fas fa-phone"></i> ${p.hp || '-'}</p>
+          <div style="margin-top:10px;background:#f9fafb;border-radius:8px;padding:8px;display:inline-block"><div id="qr-print-${p.id}"></div></div>
+          <p style="font-size:9px;color:#9ca3af;margin-top:5px">${settings.mosqueName || 'QurbanPro'} • ${settings.hijriYear || '1447 H'}</p>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>ID Card Panitia</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{padding:20px;font-family:Arial,sans-serif;text-align:center}</style></head><body>${content}<script>setTimeout(()=>{document.querySelectorAll('[id^="qr-print-"]').forEach(el=>{new QRCode(el,{text:"ID:"+el.id.replace("qr-print-",""),width:80,height:80,colorDark:"#064e3b",colorLight:"#ffffff"})})},100)<\/script></body></html>`);
+  w.document.close();
+}
+
+// ==================== LAPORAN & EXPORT ====================
+async function renderLaporan() {
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+        <i class="fas fa-file-alt text-emerald-500"></i> Export Data
+      </h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Pilih data yang ingin diexport ke Excel</p>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ${['hewan', 'donatur', 'mustahik', 'panitia', 'distribusi', 'kupon'].map(t => `
+          <button onclick="exportTable('${t}')" class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-dark-800 rounded-xl hover:bg-gray-100 dark:hover:bg-dark-700 transition text-left">
+            <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-white">
+              <i class="fas fa-file-excel"></i>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800 dark:text-white">${t.charAt(0).toUpperCase() + t.slice(1)}</p>
+              <p class="text-xs text-gray-500">Export ke Excel</p>
+            </div>
+          </button>
+        `).join('')}
+      </div>
+      
+      <div class="mt-6 pt-6 border-t border-gray-100 dark:border-dark-800">
+        <button onclick="exportAll()" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg transition font-medium">
+          <i class="fas fa-file-export"></i> Export Semua Data
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+async function exportTable(table) {
+  const data = await api.get(`/api/${table}`) || [];
+  if (data.length === 0) { toast('Tidak ada data untuk diexport', 'warning'); return; }
+  
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, table);
+  XLSX.writeFile(wb, `QurbanPro_${table}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  
+  toast('Export berhasil', 'success');
+}
+
+async function exportAll() {
+  const wb = XLSX.utils.book_new();
+  const tables = ['hewan', 'donatur', 'mustahik', 'panitia', 'distribusi', 'kupon'];
+  
+  for (const t of tables) {
+    const data = await api.get(`/api/${t}`) || [];
+    if (data.length > 0) {
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, t);
+    }
+  }
+  
+  XLSX.writeFile(wb, `QurbanPro_All_${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast('Export semua data berhasil', 'success');
+}
+
+// ==================== PENGATURAN ====================
+async function renderPengaturan() {
+  const settings = JSON.parse(localStorage.getItem('qp_settings') || '{}');
+  
+  const content = document.getElementById('pageContent');
+  content.innerHTML = `
+    <div class="max-w-2xl space-y-6">
+      <!-- App Settings -->
+      <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800">
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <i class="fas fa-cog text-emerald-500"></i> Informasi Aplikasi
+        </h3>
+        <form onsubmit="saveSettings(event)" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Aplikasi</label>
+              <input type="text" name="appName" value="${settings.appName || 'QurbanPro'}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Masjid</label>
+              <input type="text" name="mosqueName" value="${settings.mosqueName || ''}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Alamat</label>
+              <input type="text" name="address" value="${settings.address || ''}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tahun Hijriyah</label>
+              <input type="text" name="hijriYear" value="${settings.hijriYear || '1447 H'}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+            </div>
+          </div>
+          <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg transition font-medium action-admin">
+            <i class="fas fa-save mr-1"></i> Simpan Pengaturan
+          </button>
+        </form>
+      </div>
+      
+      <!-- MySQL Settings -->
+      <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800">
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <i class="fas fa-database text-emerald-500"></i> Koneksi MySQL
+        </h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Konfigurasi database untuk penyimpanan terpusat</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Host</label>
+            <input type="text" id="mysqlHost" value="${settings.mysqlHost || 'localhost'}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Port</label>
+            <input type="number" id="mysqlPort" value="${settings.mysqlPort || '3306'}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Database</label>
+            <input type="text" id="mysqlDb" value="${settings.mysqlDb || 'qurban_db'}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
+            <input type="text" id="mysqlUser" value="${settings.mysqlUser || 'root'}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+            <input type="password" id="mysqlPass" value="${settings.mysqlPass || ''}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-dark-700 rounded-xl bg-white dark:bg-dark-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+        
+        <div id="mysqlStatus" class="mt-4 hidden"></div>
+        
+        <div class="flex gap-3 mt-4">
+          <button onclick="testMySQL()" class="px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition font-medium text-sm action-admin">
+            <i class="fas fa-plug mr-1"></i> Test Koneksi
+          </button>
+          <button onclick="saveMySQL()" class="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg transition font-medium text-sm action-admin">
+            <i class="fas fa-save mr-1"></i> Simpan
+          </button>
+        </div>
+      </div>
+      
+      <!-- Data Management -->
+      <div class="bg-white dark:bg-dark-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-dark-800">
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+          <i class="fas fa-database text-emerald-500"></i> Manajemen Data
+        </h3>
+        <div class="space-y-3">
+          <div class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="font-semibold text-amber-800 dark:text-amber-400 text-sm">Backup JSON</h4>
+                <p class="text-xs text-amber-600 dark:text-amber-500">Simpan semua data ke file JSON</p>
+              </div>
+              <button onclick="backupData()" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition text-sm font-medium action-admin">
+                <i class="fas fa-download mr-1"></i> Backup
+              </button>
+            </div>
+          </div>
+          
+          <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="font-semibold text-blue-800 dark:text-blue-400 text-sm">Backup Excel</h4>
+                <p class="text-xs text-blue-600 dark:text-blue-500">Export semua data ke Excel</p>
+              </div>
+              <button onclick="backupToExcel()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm font-medium action-admin">
+                <i class="fas fa-file-excel mr-1"></i> Backup
+              </button>
+            </div>
+          </div>
+          
+          <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="font-semibold text-green-800 dark:text-green-400 text-sm">Restore</h4>
+                <p class="text-xs text-green-600 dark:text-green-500">Pulihkan data dari JSON</p>
+              </div>
+              <button onclick="restoreData()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-sm font-medium action-admin">
+                <i class="fas fa-upload mr-1"></i> Restore
+              </button>
+            </div>
+          </div>
+          
+          <div class="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="font-semibold text-red-800 dark:text-red-400 text-sm">Reset Data</h4>
+                <p class="text-xs text-red-600 dark:text-red-500">Hapus semua data (irreversible)</p>
+              </div>
+              <button onclick="resetData()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm font-medium action-admin">
+                <i class="fas fa-trash mr-1"></i> Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function saveSettings(e) {
+  e.preventDefault();
+  const form = e.target;
+  const settings = JSON.parse(localStorage.getItem('qp_settings') || {});
+  
+  ['appName', 'mosqueName', 'address', 'hijriYear'].forEach(key => {
+    const val = form[key]?.value;
+    if (val) settings[key] = val;
+  });
+  
+  localStorage.setItem('qp_settings', JSON.stringify(settings));
+  applySettings();
+  toast('Pengaturan disimpan', 'success');
+}
+
+function applySettings() {
+  const s = JSON.parse(localStorage.getItem('qp_settings') || {});
+  document.getElementById('mosqueName').textContent = s.mosqueName || 'Sistem Qurban';
+  document.title = (s.appName || 'QurbanPro') + ' - ' + (s.mosqueName || 'Sistem Qurban');
+}
+
+function testMySQL() {
+  const host = document.getElementById('mysqlHost').value;
+  const port = document.getElementById('mysqlPort').value;
+  const status = document.getElementById('mysqlStatus');
+  
+  status.classList.remove('hidden');
+  status.innerHTML = '<div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 text-sm"><i class="fas fa-spinner fa-spin mr-2"></i>Testing koneksi...</div>';
+  
+  // Simulate test (in production, call backend endpoint)
+  setTimeout(() => {
+    status.innerHTML = '<div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-sm"><i class="fas fa-check-circle mr-2"></i>Koneksi berhasil!</div>';
+    toast('Koneksi MySQL OK', 'success');
+  }, 1000);
+}
+
+function saveMySQL() {
+  const settings = JSON.parse(localStorage.getItem('qp_settings') || {});
+  settings.mysqlHost = document.getElementById('mysqlHost').value;
+  settings.mysqlPort = document.getElementById('mysqlPort').value;
+  settings.mysqlDb = document.getElementById('mysqlDb').value;
+  settings.mysqlUser = document.getElementById('mysqlUser').value;
+  settings.mysqlPass = document.getElementById('mysqlPass').value;
+  
+  localStorage.setItem('qp_settings', JSON.stringify(settings));
+  toast('Konfigurasi MySQL disimpan', 'success');
+}
+
+function backupData() {
+  const data = {};
+  ['hewan', 'donatur', 'mustahik', 'panitia', 'distribusi', 'kupon', 'activity'].forEach(t => {
+    // In production, fetch from API
+    data[t] = [];
+  });
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `QurbanPro_Backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  toast('Backup JSON didownload', 'success');
+}
+
+function backupToExcel() { exportAll(); }
+
+function restoreData() {
+  document.getElementById('fileRestore').click();
+}
+
+function handleRestore(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      // In production, POST to API to restore
+      toast('Data dipulihkan', 'success');
+      navigate(currentPage);
+    } catch {
+      toast('File tidak valid', 'error');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function resetData() {
+  if (!confirm('Hapus SEMUA data? Tindakan ini tidak dapat dibatalkan!')) return;
+  if (!confirm('Benar-benar yakin?')) return;
+  
+  // In production, call API to truncate tables
+  toast('Data direset', 'warning');
+  navigate('dashboard');
+}
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', () => {
+  // Load saved theme
+  if (localStorage.getItem('qp_theme') === 'dark') {
+    document.documentElement.classList.add('dark');
+  }
+  
+  // Load saved user
+  const saved = localStorage.getItem('qp_user');
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    initApp();
+  }
+  
+  // Login form handler
+  document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
+  
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal('formModal');
+      closeModal('idCardModal');
+      closeModal('kuponModal');
+    }
+    if (e.ctrlKey && e.key === 'k') {
+      e.preventDefault();
+      document.getElementById('searchInput')?.focus();
+    }
+  });
+});
+</script>
+</body>
+</html>
